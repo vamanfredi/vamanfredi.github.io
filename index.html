@@ -1,221 +1,414 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>SPECK Cipher</title>
+    <meta charset="UTF-8">
+    <title>SPECK-128/ECB Cipher Tool</title>
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #ecf0f1;
+            --text-color: #333;
+            --error-color: #e74c3c;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
         }
+
+        .container {
+            max-width: 700px;
+            margin: 30px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
+
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary-color);
         }
-        .info-text {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        input[type="text"] {
+
+        input, select, textarea {
             width: 100%;
-            padding: 8px;
-            margin-bottom: 5px;
-        }
-        .key-feedback {
-            font-size: 0.9em;
-            margin-top: 5px;
-        }
-        .valid {
-            color: green;
-        }
-        .invalid {
-            color: red;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #result {
-            margin-top: 20px;
             padding: 10px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 5px;
+            transition: border-color 0.3s ease;
         }
-        .bits-display {
-            font-family: monospace;
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .error {
+            color: var(--error-color);
+            font-size: 0.9em;
             margin-top: 5px;
-            padding: 5px;
-            background-color: #f5f5f5;
-            border-radius: 3px;
-            word-wrap: break-word;
+            display: none;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        #input, #output {
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 15px;
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+
+        .icon {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            margin-right: 0.5em;
+            vertical-align: middle;
+            background-size: cover;
+        }
+
+        .lock-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/%3E%3Crect x='9' y='11' width='6' height='5' rx='1'/%3E%3Cpath d='M12 17v-2'/%3E%3C/svg%3E");
+        }
+
+        .unlock-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 9.9-1'/%3E%3C/svg%3E");
         }
     </style>
 </head>
 <body>
-    <h1>Cifrador SPECK 128/128</h1>
-    <div class="info-text">
-        <p>SPECK-128/128 utiliza:</p>
-        <ul>
-            <li>Tamaño de bloque: 128 bits</li>
-            <li>Tamaño de clave: 128 bits (16 caracteres × 8 bits por carácter)</li>
-            <li>Número de rondas: 32</li>
-        </ul>
+    <div class="container">
+        <h1>SPECK-128/ECB Cipher Tool</h1>
+        
+        <div class="form-group">
+            <label for="inputType">Input Type:</label>
+            <select id="inputType">
+                <option value="text">Text</option>
+                <option value="hex">Hexadecimal</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="key">Key (16 bytes - 32 hex characters):</label>
+            <input type="text" id="key" placeholder="Enter exactly 32 hex characters" maxlength="32">
+            <div id="keyError" class="error">Key must be exactly 32 hex characters</div>
+        </div>
+
+        <div class="form-group">
+            <label for="input">Input:</label>
+            <textarea id="input" placeholder="Enter plain text or hexadecimal data to encrypt/decrypt"></textarea>
+            <div id="inputError" class="error">Invalid input</div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="encrypt()">
+                <span class="icon lock-icon"></span>Encrypt
+            </button>
+            <button onclick="decrypt()">
+                <span class="icon unlock-icon"></span>Decrypt
+            </button>
+        </div>
+
+        <div class="form-group">
+            <label for="output">Output:</label>
+            <textarea id="output" readonly></textarea>
+        </div>
     </div>
-    <div class="form-group">
-        <label for="plaintext">Texto a cifrar:</label>
-        <input type="text" id="plaintext" required>
-    </div>
-    <div class="form-group">
-        <label for="key">Clave:</label>
-        <div class="info-text">La clave debe tener exactamente 16 caracteres (128 bits)</div>
-        <input type="text" id="key" oninput="updateKeyFeedback()" maxlength="16" required>
-        <div id="keyFeedback" class="key-feedback"></div>
-        <div id="bitsDisplay" class="bits-display"></div>
-    </div>
-    <button onclick="encrypt()">Cifrar</button>
-    <div id="result"></div>
 
     <script>
-        class SPECK {
-            constructor() {
-                this.WORD_SIZE = 64;
-                this.ROUNDS = 32;
-                this.ALPHA = 8;
-                this.BETA = 3;
-            }
+        // Constants
+        const ROUNDS = 32n;
+        const MASK64 = (1n << 64n) - 1n;
+        const BLOCK_SIZE = 16;
+        
+        function rotl(x, r) {
+            x = BigInt(x) & MASK64;
+            r = BigInt(r);
+            return ((x << r) | (x >> (64n - r))) & MASK64;
+        }
 
-            rotateRight(value, shift) {
-                shift = BigInt(shift);
-                value = BigInt(value);
-                return BigInt.asUintN(64, ((value >> shift) | (value << (64n - shift))));
-            }
+        function rotr(x, r) {
+            x = BigInt(x) & MASK64;
+            r = BigInt(r);
+            return ((x >> r) | (x << (64n - r))) & MASK64;
+        }
 
-            rotateLeft(value, shift) {
-                shift = BigInt(shift);
-                value = BigInt(value);
-                return BigInt.asUintN(64, ((value << shift) | (value >> (64n - shift))));
-            }
+        function speckRound(x, y, k) {
+            x = rotr(x, 8n);
+            x = (x + y) & MASK64;
+            x ^= k;
+            y = rotl(y, 3n);
+            y ^= x;
+            return [x, y];
+        }
 
-            round(x, y, k) {
-                x = this.rotateRight(x, this.ALPHA);
-                x = BigInt.asUintN(64, BigInt(x) + BigInt(y));
-                x = BigInt.asUintN(64, x ^ BigInt(k));
-                y = this.rotateLeft(y, this.BETA);
-                y = BigInt.asUintN(64, y ^ x);
-                return [x, y];
-            }
+        function speckRoundInverse(x, y, k) {
+            y ^= x;
+            y = rotr(y, 3n);
+            x ^= k;
+            x = (x - y) & MASK64;
+            x = rotl(x, 8n);
+            return [x, y];
+        }
 
-            expandKey(key) {
-                let l = [];
-                let k = [];
-                
-                k[0] = key >> 64n;
-                l[0] = key & ((1n << 64n) - 1n);
-                
-                for (let i = 0; i < this.ROUNDS - 1; i++) {
-                    let result = this.round(l[i], k[i], BigInt(i));
-                    l[i + 1] = result[0];
-                    k[i + 1] = result[1];
+        function expandKey(key) {
+            let roundKeys = new Array(Number(ROUNDS));
+            let l = new Array(3);
+            
+            // Initialize key schedule
+            roundKeys[0] = key[0];
+            l[0] = key[1];
+            l[1] = key[2];
+            l[2] = key[3];
+            
+            // Generate round keys
+            for(let i = 0; i < Number(ROUNDS) - 1; i++) {
+                let [temp, newL] = speckRound(l[i % 3], roundKeys[i], BigInt(i));
+                l[i % 3] = newL;
+                roundKeys[i + 1] = temp;
+            }
+            
+            return roundKeys;
+        }
+
+        function encryptBlock(block, roundKeys) {
+            let [x, y] = block;
+            
+            for(let i = 0; i < Number(ROUNDS); i++) {
+                [x, y] = speckRound(x, y, roundKeys[i]);
+            }
+            
+            return [x, y];
+        }
+
+        function decryptBlock(block, roundKeys) {
+            let [x, y] = block;
+            
+            for(let i = Number(ROUNDS) - 1; i >= 0; i--) {
+                [x, y] = speckRoundInverse(x, y, roundKeys[i]);
+            }
+            
+            return [x, y];
+        }
+
+        // PKCS7 Padding
+        function pkcs7Pad(bytes) {
+            const padLength = BLOCK_SIZE - (bytes.length % BLOCK_SIZE);
+            const pad = new Array(padLength).fill(padLength);
+            return [...bytes, ...pad];
+        }
+
+        function pkcs7Unpad(bytes) {
+            if (bytes.length === 0) return bytes;
+            
+            const padLength = bytes[bytes.length - 1];
+            
+            // Validate padding
+            for (let i = 1; i <= padLength; i++) {
+                if (bytes[bytes.length - i] !== padLength) {
+                    throw new Error('Invalid padding');
                 }
-                
-                return k;
             }
+            
+            return bytes.slice(0, bytes.length - padLength);
+        }
 
-            encrypt(plaintext, key) {
-                let x = plaintext >> 64n;
-                let y = plaintext & ((1n << 64n) - 1n);
-                
-                const subkeys = this.expandKey(key);
-                
-                for (let i = 0; i < this.ROUNDS; i++) {
-                    let result = this.round(x, y, subkeys[i]);
-                    x = result[0];
-                    y = result[1];
-                }
-                
-                return (x << 64n) | y;
+        // Helper functions for conversion
+        function hexToBytes(hex) {
+            if (hex.length % 2 !== 0) hex = '0' + hex;
+            let bytes = [];
+            for(let i = 0; i < hex.length; i += 2) {
+                bytes.push(parseInt(hex.substr(i, 2), 16));
             }
+            return bytes;
+        }
 
-            textToBigInt(text) {
-                const encoder = new TextEncoder();
-                const bytes = encoder.encode(text.padEnd(16, '\0'));
-                let value = 0n;
-                
-                for (let i = 0; i < 16; i++) {
-                    value = (value << 8n) | BigInt(bytes[i]);
-                }
-                
-                return value;
-            }
+        function bytesToHex(bytes) {
+            return bytes.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        }
 
-            bigIntToHex(value) {
-                return value.toString(16).padStart(32, '0');
+        function stringToBytes(str) {
+            return Array.from(new TextEncoder().encode(str));
+        }
+
+        function bytesToString(bytes) {
+            try {
+                return new TextDecoder().decode(new Uint8Array(bytes));
+            } catch (e) {
+                return bytesToHex(bytes);
             }
         }
 
-        const speck = new SPECK();
+        function bytesToBlock(bytes) {
+            let left = 0n;
+            let right = 0n;
+            
+            for(let i = 0; i < 8; i++) {
+                left = (left << 8n) | BigInt(bytes[i]);
+                right = (right << 8n) | BigInt(bytes[i + 8]);
+            }
+            
+            return [left, right];
+        }
 
-        function updateKeyFeedback() {
-            const keyInput = document.getElementById('key');
-            const feedback = document.getElementById('keyFeedback');
-            const bitsDisplay = document.getElementById('bitsDisplay');
-            const key = keyInput.value;
-            const remainingChars = 16 - key.length;
+        function blockToBytes(block) {
+            let bytes = [];
+            let [left, right] = block;
+            
+            for(let i = 7; i >= 0; i--) {
+                bytes[i] = Number(left & 0xffn);
+                bytes[i + 8] = Number(right & 0xffn);
+                left >>= 8n;
+                right >>= 8n;
+            }
+            
+            return bytes;
+        }
 
-            if (key.length === 16) {
-                feedback.className = 'key-feedback valid';
-                feedback.textContent = '✓ Longitud correcta (16 caracteres = 128 bits)';
-                
-                const bits = Array.from(key).map(char => 
-                    char.charCodeAt(0).toString(2).padStart(8, '0')
-                ).join(' ');
-                bitsDisplay.textContent = `Representación en bits: ${bits}`;
+        function processInput(isEncrypt) {
+            // Get and validate key
+            const keyHex = document.getElementById('key').value.replace(/\s/g, '').toLowerCase();
+            if(!/^[0-9a-f]{32}$/.test(keyHex)) {
+                document.getElementById('keyError').style.display = 'block';
+                return;
+            }
+            document.getElementById('keyError').style.display = 'none';
+
+            // Convert key to blocks
+            const keyBytes = hexToBytes(keyHex);
+            const keyBlocks = [
+                (BigInt('0x' + keyHex.substr(0, 16))),
+                (BigInt('0x' + keyHex.substr(16, 16))),
+                0n,
+                0n
+            ];
+
+            // Generate round keys
+            const roundKeys = expandKey(keyBlocks);
+
+            // Get and process input
+            const input = document.getElementById('input').value;
+            const inputType = document.getElementById('inputType').value;
+            
+            let inputBytes;
+            if(inputType === 'hex') {
+                const cleanHex = input.replace(/\s/g, '').toLowerCase();
+                if(!/^[0-9a-f]*$/.test(cleanHex)) {
+                    document.getElementById('inputError').textContent = 'Invalid hex input';
+                    document.getElementById('inputError').style.display = 'block';
+                    return;
+                }
+                inputBytes = hexToBytes(cleanHex);
             } else {
-                feedback.className = 'key-feedback invalid';
-                feedback.textContent = `× Faltan ${remainingChars} caracteres (actual: ${key.length * 8} bits)`;
-                bitsDisplay.textContent = '';
+                inputBytes = stringToBytes(input);
             }
-        }
 
-        function encrypt() {
-            const plaintextInput = document.getElementById('plaintext').value;
-            const keyInput = document.getElementById('key').value;
+            // Apply padding or remove padding based on operation
+            inputBytes = isEncrypt ? 
+                pkcs7Pad(inputBytes) : 
+                inputBytes;
 
-            if (keyInput.length !== 16) {
-                alert('La clave debe tener exactamente 16 caracteres (128 bits)');
+            // Validate block alignment
+            if(inputBytes.length % BLOCK_SIZE !== 0) {
+                document.getElementById('inputError').textContent = 'Input must be a multiple of block size';
+                document.getElementById('inputError').style.display = 'block';
                 return;
             }
 
-            try {
-                const plaintextBigInt = speck.textToBigInt(plaintextInput);
-                const keyBigInt = speck.textToBigInt(keyInput);
-                
-                const ciphertext = speck.encrypt(plaintextBigInt, keyBigInt);
-                
-                document.getElementById('result').innerHTML = `
-                    <h3>Resultado:</h3>
-                    <p>Texto cifrado (hex): ${speck.bigIntToHex(ciphertext)}</p>
-                    <p>Longitud de la clave: ${keyInput.length} caracteres (${keyInput.length * 8} bits)</p>
-                `;
-            } catch (error) {
-                document.getElementById('result').innerHTML = `
-                    <h3>Error:</h3>
-                    <p>${error.message}</p>
-                `;
+            // Process each block
+            let outputBytes = [];
+            for(let i = 0; i < inputBytes.length; i += BLOCK_SIZE) {
+                const blockBytes = inputBytes.slice(i, i + BLOCK_SIZE);
+                const block = bytesToBlock(blockBytes);
+                const processedBlock = isEncrypt ? 
+                    encryptBlock(block, roundKeys) : 
+                    decryptBlock(block, roundKeys);
+                outputBytes = outputBytes.concat(blockToBytes(processedBlock));
             }
+
+            // Remove padding if decrypting
+            if(!isEncrypt) {
+                try {
+                    outputBytes = pkcs7Unpad(outputBytes);
+                } catch(e) {
+                    alert('Decryption failed: Invalid padding');
+                    return;
+                }
+            }
+
+            // Convert output based on input type
+            const output = inputType === 'hex' ? 
+                bytesToHex(outputBytes) : 
+                bytesToString(outputBytes);
+            
+            document.getElementById('output').value = output;
+        }
+
+        function encrypt() {
+            processInput(true);
+        }
+
+        function decrypt() {
+            processInput(false);
         }
     </script>
 </body>
