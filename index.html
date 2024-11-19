@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SPECK Cipher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .info-text {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+        }
+        .key-feedback {
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .valid {
+            color: green;
+        }
+        .invalid {
+            color: red;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .bits-display {
+            font-family: monospace;
+            margin-top: 5px;
+            padding: 5px;
+            background-color: #f5f5f5;
+            border-radius: 3px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cifrador SPECK 128/128</h1>
+    <div class="info-text">
+        <p>SPECK-128/128 utiliza:</p>
+        <ul>
+            <li>Tamaño de bloque: 128 bits</li>
+            <li>Tamaño de clave: 128 bits (16 caracteres × 8 bits por carácter)</li>
+            <li>Número de rondas: 32</li>
+        </ul>
+    </div>
+    <div class="form-group">
+        <label for="plaintext">Texto a cifrar:</label>
+        <input type="text" id="plaintext" required>
+    </div>
+    <div class="form-group">
+        <label for="key">Clave:</label>
+        <div class="info-text">La clave debe tener exactamente 16 caracteres (128 bits)</div>
+        <input type="text" id="key" oninput="updateKeyFeedback()" maxlength="16" required>
+        <div id="keyFeedback" class="key-feedback"></div>
+        <div id="bitsDisplay" class="bits-display"></div>
+    </div>
+    <button onclick="encrypt()">Cifrar</button>
+    <div id="result"></div>
+
+    <script>
+        class SPECK {
+            constructor() {
+                this.WORD_SIZE = 64;
+                this.ROUNDS = 32;
+                this.ALPHA = 8;
+                this.BETA = 3;
+            }
+
+            rotateRight(value, shift) {
+                shift = BigInt(shift);
+                value = BigInt(value);
+                return BigInt.asUintN(64, ((value >> shift) | (value << (64n - shift))));
+            }
+
+            rotateLeft(value, shift) {
+                shift = BigInt(shift);
+                value = BigInt(value);
+                return BigInt.asUintN(64, ((value << shift) | (value >> (64n - shift))));
+            }
+
+            round(x, y, k) {
+                x = this.rotateRight(x, this.ALPHA);
+                x = BigInt.asUintN(64, BigInt(x) + BigInt(y));
+                x = BigInt.asUintN(64, x ^ BigInt(k));
+                y = this.rotateLeft(y, this.BETA);
+                y = BigInt.asUintN(64, y ^ x);
+                return [x, y];
+            }
+
+            expandKey(key) {
+                let l = [];
+                let k = [];
+                
+                k[0] = key >> 64n;
+                l[0] = key & ((1n << 64n) - 1n);
+                
+                for (let i = 0; i < this.ROUNDS - 1; i++) {
+                    let result = this.round(l[i], k[i], BigInt(i));
+                    l[i + 1] = result[0];
+                    k[i + 1] = result[1];
+                }
+                
+                return k;
+            }
+
+            encrypt(plaintext, key) {
+                let x = plaintext >> 64n;
+                let y = plaintext & ((1n << 64n) - 1n);
+                
+                const subkeys = this.expandKey(key);
+                
+                for (let i = 0; i < this.ROUNDS; i++) {
+                    let result = this.round(x, y, subkeys[i]);
+                    x = result[0];
+                    y = result[1];
+                }
+                
+                return (x << 64n) | y;
+            }
+
+            textToBigInt(text) {
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(text.padEnd(16, '\0'));
+                let value = 0n;
+                
+                for (let i = 0; i < 16; i++) {
+                    value = (value << 8n) | BigInt(bytes[i]);
+                }
+                
+                return value;
+            }
+
+            bigIntToHex(value) {
+                return value.toString(16).padStart(32, '0');
+            }
+        }
+
+        const speck = new SPECK();
+
+        function updateKeyFeedback() {
+            const keyInput = document.getElementById('key');
+            const feedback = document.getElementById('keyFeedback');
+            const bitsDisplay = document.getElementById('bitsDisplay');
+            const key = keyInput.value;
+            const remainingChars = 16 - key.length;
+
+            if (key.length === 16) {
+                feedback.className = 'key-feedback valid';
+                feedback.textContent = '✓ Longitud correcta (16 caracteres = 128 bits)';
+                
+                const bits = Array.from(key).map(char => 
+                    char.charCodeAt(0).toString(2).padStart(8, '0')
+                ).join(' ');
+                bitsDisplay.textContent = `Representación en bits: ${bits}`;
+            } else {
+                feedback.className = 'key-feedback invalid';
+                feedback.textContent = `× Faltan ${remainingChars} caracteres (actual: ${key.length * 8} bits)`;
+                bitsDisplay.textContent = '';
+            }
+        }
+
+        function encrypt() {
+            const plaintextInput = document.getElementById('plaintext').value;
+            const keyInput = document.getElementById('key').value;
+
+            if (keyInput.length !== 16) {
+                alert('La clave debe tener exactamente 16 caracteres (128 bits)');
+                return;
+            }
+
+            try {
+                const plaintextBigInt = speck.textToBigInt(plaintextInput);
+                const keyBigInt = speck.textToBigInt(keyInput);
+                
+                const ciphertext = speck.encrypt(plaintextBigInt, keyBigInt);
+                
+                document.getElementById('result').innerHTML = `
+                    <h3>Resultado:</h3>
+                    <p>Texto cifrado (hex): ${speck.bigIntToHex(ciphertext)}</p>
+                    <p>Longitud de la clave: ${keyInput.length} caracteres (${keyInput.length * 8} bits)</p>
+                `;
+            } catch (error) {
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
